@@ -1,0 +1,512 @@
+[
+    {
+        "id": "b6add49cc5aedfa5",
+        "type": "tab",
+        "label": "Fluxo 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "8d107a19e006e259",
+        "type": "tcp in",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "server": "server",
+        "host": "",
+        "port": "65001",
+        "datamode": "stream",
+        "datatype": "utf8",
+        "newline": "",
+        "topic": "",
+        "trim": false,
+        "base64": false,
+        "tls": "",
+        "x": 220,
+        "y": 320,
+        "wires": [
+            [
+                "e13f927d9e19dd22"
+            ]
+        ]
+    },
+    {
+        "id": "f5ebff8652846560",
+        "type": "tcp out",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "host": "",
+        "port": "65002",
+        "beserver": "server",
+        "base64": false,
+        "end": false,
+        "tls": "",
+        "x": 1080,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "e13f927d9e19dd22",
+        "type": "function",
+        "z": "b6add49cc5aedfa5",
+        "name": "atuador",
+        "func": "msg.CV = parseFloat(msg.payload);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 320,
+        "wires": [
+            [
+                "b4e833c1c6785a78"
+            ]
+        ]
+    },
+    {
+        "id": "b4e833c1c6785a78",
+        "type": "function",
+        "z": "b6add49cc5aedfa5",
+        "name": "planta",
+        "func": "var K = 1.5;\nvar tau = 3; // Tempo de resposta normal\nvar dt = 0.1;\nvar state = context.get('state') || 0;\n\nvar estado = flow.get('estado_planta') || 'normal';\nvar input = parseFloat(msg.CV) || 0;\n\n// --- 1. FALHA NA BOMBA (Degradação Severa) ---\nif (estado === 'bomba') {\n    // A bomba sofre um desgaste mecânico e perde 85% de eficiência.\n    // A CV vai estourar para tentar compensar, mas o PV vai cair lentamente.\n    input = input * 0.15; \n    tau = 8; // Segura a inércia térmica/hidráulica para a queda ser suave\n}\n\n// --- EQUAÇÃO FÍSICA DO TANQUE ---\nstate = state + (K * input - state) * (dt / tau);\n\n// --- 2. VAZAMENTO NO TANQUE ---\nif (estado === 'vazamento') {\n    // Aumentamos o furo! O PID vai precisar de um esforço colossal (+35 na CV)\n    // para conseguir estabilizar o nível novamente.\n    state = state - 1.8; \n}\n\n// Limites físicos para não bugar o PI\nif (state < 0) state = 0;\nif (state > 100) state = 100;\n\ncontext.set('state', state);\n\n// --- 3. FALHA NO SENSOR ---\nif (estado === 'sensor') {\n    msg.PV = 0;\n    msg.payload = 0;\n} else {\n    msg.PV = state;\n    msg.payload = state;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 320,
+        "wires": [
+            [
+                "93e77ac7d76468df",
+                "9741cb07979a02bf"
+            ]
+        ]
+    },
+    {
+        "id": "93e77ac7d76468df",
+        "type": "function",
+        "z": "b6add49cc5aedfa5",
+        "name": "sensor",
+        "func": "msg.payload = msg.PV.toString();\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 850,
+        "y": 320,
+        "wires": [
+            [
+                "f5ebff8652846560",
+                "2d4388e2baa71bb9"
+            ]
+        ]
+    },
+    {
+        "id": "9741cb07979a02bf",
+        "type": "debug",
+        "z": "b6add49cc5aedfa5",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 820,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "2d4388e2baa71bb9",
+        "type": "debug",
+        "z": "b6add49cc5aedfa5",
+        "name": "debug 2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 980,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "1a69bf41b3277975",
+        "type": "inject",
+        "z": "b6add49cc5aedfa5",
+        "name": "Normalizar Planta",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "normal",
+        "payloadType": "str",
+        "x": 630,
+        "y": 580,
+        "wires": [
+            [
+                "87e497a932c2662a"
+            ]
+        ]
+    },
+    {
+        "id": "47e1e2a4665d7d82",
+        "type": "inject",
+        "z": "b6add49cc5aedfa5",
+        "name": "Falha no Sensor",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "sensor",
+        "payloadType": "str",
+        "x": 620,
+        "y": 640,
+        "wires": [
+            [
+                "87e497a932c2662a"
+            ]
+        ]
+    },
+    {
+        "id": "739ed40c18cf5bd3",
+        "type": "inject",
+        "z": "b6add49cc5aedfa5",
+        "name": "Falha na Bomba",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "bomba",
+        "payloadType": "str",
+        "x": 620,
+        "y": 700,
+        "wires": [
+            [
+                "87e497a932c2662a"
+            ]
+        ]
+    },
+    {
+        "id": "be8e35dc4b52cdd8",
+        "type": "inject",
+        "z": "b6add49cc5aedfa5",
+        "name": "Vazamento",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "vazamento",
+        "payloadType": "str",
+        "x": 600,
+        "y": 760,
+        "wires": [
+            [
+                "87e497a932c2662a"
+            ]
+        ]
+    },
+    {
+        "id": "87e497a932c2662a",
+        "type": "change",
+        "z": "b6add49cc5aedfa5",
+        "name": "Estado Planta",
+        "rules": [
+            {
+                "t": "set",
+                "p": "estado_planta",
+                "pt": "flow",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1100,
+        "y": 620,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ae696b93509e04ca",
+        "type": "http in",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "url": "/normalizar",
+        "method": "get",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 600,
+        "y": 840,
+        "wires": [
+            [
+                "a5496509446d083a"
+            ]
+        ]
+    },
+    {
+        "id": "a5c2bae9e8437752",
+        "type": "http in",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "url": "/falha-sensor",
+        "method": "get",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 610,
+        "y": 920,
+        "wires": [
+            [
+                "fb1a6a70c4eb8e33"
+            ]
+        ]
+    },
+    {
+        "id": "d0dce929ea9896e2",
+        "type": "http in",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "url": "/falha-bomba",
+        "method": "get",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 610,
+        "y": 980,
+        "wires": [
+            [
+                "2f5d9d8f41d9acfa"
+            ]
+        ]
+    },
+    {
+        "id": "e9c92289e440122e",
+        "type": "http in",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "url": "/vazamento",
+        "method": "get",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 600,
+        "y": 1040,
+        "wires": [
+            [
+                "8d6aac085afba36a"
+            ]
+        ]
+    },
+    {
+        "id": "a5496509446d083a",
+        "type": "change",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "normal",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 830,
+        "y": 840,
+        "wires": [
+            [
+                "87e497a932c2662a",
+                "9b9ae9d2aa9f9d5d"
+            ]
+        ]
+    },
+    {
+        "id": "fb1a6a70c4eb8e33",
+        "type": "change",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "sensor",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 830,
+        "y": 920,
+        "wires": [
+            [
+                "87e497a932c2662a",
+                "2fec6ca0359d1c0e"
+            ]
+        ]
+    },
+    {
+        "id": "2f5d9d8f41d9acfa",
+        "type": "change",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "bomba",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 830,
+        "y": 980,
+        "wires": [
+            [
+                "87e497a932c2662a",
+                "c017a2eb61049f0d"
+            ]
+        ]
+    },
+    {
+        "id": "8d6aac085afba36a",
+        "type": "change",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "vazamento",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 830,
+        "y": 1040,
+        "wires": [
+            [
+                "87e497a932c2662a",
+                "e172aed3a562519d"
+            ]
+        ]
+    },
+    {
+        "id": "9b9ae9d2aa9f9d5d",
+        "type": "http response",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 1090,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "2fec6ca0359d1c0e",
+        "type": "http response",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 1090,
+        "y": 920,
+        "wires": []
+    },
+    {
+        "id": "c017a2eb61049f0d",
+        "type": "http response",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 1090,
+        "y": 980,
+        "wires": []
+    },
+    {
+        "id": "e172aed3a562519d",
+        "type": "http response",
+        "z": "b6add49cc5aedfa5",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 1090,
+        "y": 1040,
+        "wires": []
+    }
+]
