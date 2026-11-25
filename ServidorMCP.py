@@ -4,12 +4,11 @@ import datetime
 
 
 # Configurações de Conexão com o Mango OS 
-URL_MANGO = "http://100.25.194.157:8080"
-TOKEN = "Seu_Token_Mango_Aqui"
-
-XID_NIVEL = "DP_4ee96489-f9ef-4cde-9e12-150dfa21f79c"
-XID_CV = "DP_5f55191b-73af-42cb-9c48-a4b0e5964e7b"
-XID_SETPOINT = "DP_e1a88fd4-0052-4c94-8659-1515c2c2cf86"
+URL_MANGO = "http://3.87.82.130:8080"
+TOKEN = "COLE-TOKEN-MANGO-AQUI"
+XID_NIVEL = "DP_02b801d2-4b12-48b4-b3ab-7dd018f0d79d"
+XID_CV = "DP_589a6014-c143-4eb5-b307-2b50b75f598d"
+XID_SETPOINT = "DP_2f4f5adb-c5ab-4bc6-b8fb-04f8feb9ad3d"
 
 headers_leitura = {
     "Authorization": f"Bearer {TOKEN}",
